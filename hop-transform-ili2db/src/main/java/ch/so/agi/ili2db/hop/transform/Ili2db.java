@@ -336,14 +336,45 @@ public class Ili2db extends BaseTransform<Ili2dbMeta, Ili2dbData> {
       return null;
     }
 
-    String flavor = request.getFlavor().name().toLowerCase(Locale.ROOT);
-    String function = request.getFunction().name().toLowerCase(Locale.ROOT);
+    String fileName = buildLogFileName(request);
+    return new File(new File(resolvedDirectory), fileName).getAbsolutePath();
+  }
+
+  static String buildLogFileName(Ili2dbExecutionRequest request) {
+    String importFile = request == null ? null : request.getImportFile();
+    String importFileName = extractImportFileName(importFile);
+    if (importFileName != null) {
+      return importFileName + ".log";
+    }
+
+    String flavor = "unknown";
+    String function = "unknown";
+    if (request != null && request.getFlavor() != null) {
+      flavor = request.getFlavor().name().toLowerCase(Locale.ROOT);
+    }
+    if (request != null && request.getFunction() != null) {
+      function = request.getFunction().name().toLowerCase(Locale.ROOT);
+    }
     long unique = System.currentTimeMillis();
     long randomPart = Math.abs(System.nanoTime());
-    String fileName =
-        "ili2db-" + flavor + "-" + function + "-" + unique + "-" + randomPart + ".log";
+    return "ili2db-" + flavor + "-" + function + "-" + unique + "-" + randomPart + ".log";
+  }
 
-    return new File(new File(resolvedDirectory), fileName).getAbsolutePath();
+  private static String extractImportFileName(String importFile) {
+    if (importFile == null) {
+      return null;
+    }
+    String trimmed = importFile.trim();
+    if (trimmed.isEmpty()) {
+      return null;
+    }
+    String normalized = trimmed.replace('\\', '/');
+    int separatorIndex = normalized.lastIndexOf('/');
+    String fileName = separatorIndex < 0 ? normalized : normalized.substring(separatorIndex + 1);
+    if (fileName.isBlank()) {
+      return null;
+    }
+    return fileName;
   }
 
   private List<Ili2dbOptionEntry> withLogFileOption(

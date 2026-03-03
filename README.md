@@ -57,6 +57,8 @@ Root `pom.xml` uses:
 
 ## Install in Hop
 
+### Option A: Manual ZIP install
+
 Build install ZIPs:
 
 ```bash
@@ -75,6 +77,47 @@ Plugin folders:
 - `$HOP_HOME/plugins/actions/ili2db`
 - `$HOP_HOME/plugins/transforms/ili2db`
 
+### Option B: Scripted install into Hop home
+
+```bash
+./scripts/install-to-hop-home.sh "$HOP_HOME"
+```
+
+This script expects the assembly ZIPs from Option A to exist and then unpacks both ZIPs into `$HOP_HOME`.
+
+## Shell scripts
+
+### `scripts/dev-sync-hop-plugin.sh`
+
+Builds plugin + assembly modules and syncs ZIPs directly into `HOP_HOME`.
+
+```bash
+./scripts/dev-sync-hop-plugin.sh "$HOP_HOME"           # default target: suite
+./scripts/dev-sync-hop-plugin.sh "$HOP_HOME" action
+./scripts/dev-sync-hop-plugin.sh "$HOP_HOME" transform
+```
+
+Behavior:
+- `suite` builds and installs both plugins
+- `action` installs only `plugins/actions/ili2db`
+- `transform` installs only `plugins/transforms/ili2db`
+- target plugin folders are removed before unzip to avoid stale files
+
+### `scripts/install-to-hop-home.sh`
+
+Unpacks already-built assembly ZIPs into `HOP_HOME` (no Maven build step).
+
+```bash
+./scripts/install-to-hop-home.sh "$HOP_HOME"
+```
+
+### `scripts/dev-sync-debug.sh`
+
+Optimized debug loop for local debug Hop (`./assemblies/debug/target/hop` by default):
+- builds `ili2db-core` + action/transform plugin jars
+- removes known old jar patterns in debug plugin folders
+- copies fresh plugin jars into debug Hop
+
 ## Debug workflow
 
 Create debug layout:
@@ -87,4 +130,10 @@ Sync local jars into debug Hop:
 
 ```bash
 ./scripts/dev-sync-debug.sh
+```
+
+Or sync into another Hop installation/debug layout:
+
+```bash
+./scripts/dev-sync-debug.sh "$HOP_HOME"
 ```

@@ -27,6 +27,7 @@ import org.apache.hop.ui.pipeline.transform.BaseTransformDialog;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CTabFolder;
 import org.eclipse.swt.custom.CTabItem;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.layout.FormAttachment;
 import org.eclipse.swt.layout.FormData;
@@ -161,7 +162,7 @@ public class Ili2dbDialog extends BaseTransformDialog {
     enableDisableControls();
     input.setChanged(changed);
 
-    BaseDialog.defaultShellHandling(shell, c -> ok(), c -> cancel());
+    openWithFixedShellSize(980, 760);
 
     return transformName;
   }
@@ -639,6 +640,7 @@ public class Ili2dbDialog extends BaseTransformDialog {
   private void normalizeStoredWindowSize() {
     WindowProperty windowProperty = props.getScreen(shell.getText());
     if (windowProperty == null) {
+      props.setScreen(new WindowProperty(shell.getText(), false, -1, -1, 980, 760));
       return;
     }
 
@@ -651,7 +653,15 @@ public class Ili2dbDialog extends BaseTransformDialog {
       windowProperty.setHeight(760);
       changed = true;
     }
+    if (windowProperty.getHeight() <= 0) {
+      windowProperty.setHeight(760);
+      changed = true;
+    }
     if (windowProperty.getWidth() > maxWidth) {
+      windowProperty.setWidth(980);
+      changed = true;
+    }
+    if (windowProperty.getWidth() <= 0) {
       windowProperty.setWidth(980);
       changed = true;
     }
@@ -810,6 +820,38 @@ public class Ili2dbDialog extends BaseTransformDialog {
     transformName = null;
     input.setChanged(changed);
     dispose();
+  }
+
+  private void openWithFixedShellSize(int width, int height) {
+    shell.addListener(
+        SWT.Close,
+        event -> {
+          event.doit = false;
+          cancel();
+        });
+    BaseDialog.addDefaultListeners(shell, c -> ok());
+    BaseDialog.addSpacesOnTabs(shell);
+
+    shell.layout(true, true);
+    shell.setMaximized(false);
+    shell.setMinimized(false);
+    shell.setSize(width, height);
+
+    Rectangle clientArea = shell.getDisplay().getPrimaryMonitor().getClientArea();
+    if (shell.getParent() != null) {
+      clientArea = shell.getParent().getMonitor().getClientArea();
+    }
+    int x = clientArea.x + Math.max(0, (clientArea.width - width) / 2);
+    int y = clientArea.y + Math.max(0, (clientArea.height - height) / 2);
+    shell.setLocation(x, y);
+
+    shell.open();
+    Display display = shell.getDisplay();
+    while (!shell.isDisposed()) {
+      if (!display.readAndDispatch()) {
+        display.sleep();
+      }
+    }
   }
 
   private void ok() {

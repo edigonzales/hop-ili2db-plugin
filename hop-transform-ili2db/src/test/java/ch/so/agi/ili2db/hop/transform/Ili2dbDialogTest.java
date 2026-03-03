@@ -14,9 +14,15 @@ class Ili2dbDialogTest {
     Field options = clazz.getDeclaredField("wOptions");
     Field datasetField = clazz.getDeclaredField("wDatasetField");
     Field flavor = clazz.getDeclaredField("wFlavor");
+    Field outputConnectionField = clazz.getDeclaredField("wOutputConnectionField");
+    Field outputTargetFileField = clazz.getDeclaredField("wOutputTargetFileField");
+    Field outputDatabaseSchemaField = clazz.getDeclaredField("wOutputDatabaseSchemaField");
 
     assertNotNull(options);
     assertNotNull(datasetField);
     assertNotNull(flavor);
+    assertNotNull(outputConnectionField);
+    assertNotNull(outputTargetFileField);
+    assertNotNull(outputDatabaseSchemaField);
   }
 }

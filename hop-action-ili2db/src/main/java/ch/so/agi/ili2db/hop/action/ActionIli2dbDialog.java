@@ -16,6 +16,7 @@ import org.apache.hop.core.variables.IVariables;
 import org.apache.hop.i18n.BaseMessages;
 import org.apache.hop.ui.core.PropsUi;
 import org.apache.hop.ui.core.dialog.BaseDialog;
+import org.apache.hop.ui.core.gui.WindowProperty;
 import org.apache.hop.ui.core.widget.ColumnInfo;
 import org.apache.hop.ui.core.widget.ComboVar;
 import org.apache.hop.ui.core.widget.MetaSelectionLine;
@@ -29,12 +30,14 @@ import org.apache.hop.workflow.action.IAction;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CTabFolder;
 import org.eclipse.swt.custom.CTabItem;
+import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.layout.FormAttachment;
 import org.eclipse.swt.layout.FormData;
 import org.eclipse.swt.layout.FormLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
@@ -93,6 +96,7 @@ public class ActionIli2dbDialog extends ActionDialog {
     shellLayout.marginHeight = PropsUi.getFormMargin();
     shell.setLayout(shellLayout);
     shell.setText(BaseMessages.getString(PKG, "ActionIli2dbDialog.Title"));
+    normalizeStoredWindowSize();
 
     int margin = PropsUi.getMargin();
     int middle = props.getMiddlePct();
@@ -137,6 +141,7 @@ public class ActionIli2dbDialog extends ActionDialog {
     createMainTab(tabFolder);
     createOptionsTab(tabFolder);
     createDatasetTab(tabFolder);
+    tabFolder.setSelection(0);
 
     wOk.addListener(SWT.Selection, e -> ok());
     wCancel.addListener(SWT.Selection, e -> cancel());
@@ -144,7 +149,7 @@ public class ActionIli2dbDialog extends ActionDialog {
     getData();
     enableDisableControls();
 
-    BaseDialog.defaultShellHandling(shell, c -> ok(), c -> cancel());
+    openWithFixedShellSize(980, 760);
 
     return action;
   }
@@ -193,12 +198,17 @@ public class ActionIli2dbDialog extends ActionDialog {
         lastControl);
     lastControl = wFunction;
 
-    wConnection =
-        addConnectionLine(
-            mainComposite,
-            lastControl,
-            action.getConnectionName(),
-            e -> action.setChanged());
+    String configuredConnectionName = action.getConnectionName();
+    if (configuredConnectionName == null || configuredConnectionName.isBlank()) {
+      wConnection = addConnectionLine(mainComposite, lastControl, (DatabaseMeta) null, e -> action.setChanged());
+    } else {
+      wConnection =
+          addConnectionLine(
+              mainComposite,
+              lastControl,
+              configuredConnectionName.trim(),
+              e -> action.setChanged());
+    }
     lastControl = wConnection;
 
     wGpkgFilePath = new TextVar(variables, mainComposite, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
@@ -482,7 +492,7 @@ public class ActionIli2dbDialog extends ActionDialog {
     wFlavor.setText(action.getFlavor() == null ? "ILI2GPKG" : action.getFlavor());
     wFunction.setText(action.getFunction() == null ? "IMPORT" : action.getFunction());
 
-    wConnection.setText(action.getConnectionName() == null ? "" : action.getConnectionName());
+    wConnection.setText(action.getConnectionName() == null ? "" : action.getConnectionName().trim());
     wGpkgFilePath.setText(action.getGpkgFilePath() == null ? "" : action.getGpkgFilePath());
     wSchemaName.setText(action.getSchemaName() == null ? "" : action.getSchemaName());
 
@@ -576,7 +586,7 @@ public class ActionIli2dbDialog extends ActionDialog {
     action.setFlavor(wFlavor.getText());
     action.setFunction(wFunction.getText());
 
-    action.setConnectionName(wConnection.getText());
+    action.setConnectionName(wConnection.getText() == null ? "" : wConnection.getText().trim());
     action.setGpkgFilePath(wGpkgFilePath.getText());
     action.setSchemaName(wSchemaName.getText());
 
@@ -600,5 +610,67 @@ public class ActionIli2dbDialog extends ActionDialog {
   private void cancel() {
     action.setChanged(backupChanged);
     dispose();
+  }
+
+  private void openWithFixedShellSize(int width, int height) {
+    shell.addListener(
+        SWT.Close,
+        event -> {
+          event.doit = false;
+          cancel();
+        });
+    BaseDialog.addDefaultListeners(shell, c -> ok());
+    BaseDialog.addSpacesOnTabs(shell);
+
+    shell.layout(true, true);
+    shell.setMaximized(false);
+    shell.setMinimized(false);
+    shell.setSize(width, height);
+
+    Rectangle clientArea = shell.getDisplay().getPrimaryMonitor().getClientArea();
+    if (shell.getParent() != null) {
+      clientArea = shell.getParent().getMonitor().getClientArea();
+    }
+    int x = clientArea.x + Math.max(0, (clientArea.width - width) / 2);
+    int y = clientArea.y + Math.max(0, (clientArea.height - height) / 2);
+    shell.setLocation(x, y);
+
+    shell.open();
+    Display display = shell.getDisplay();
+    while (!shell.isDisposed()) {
+      if (!display.readAndDispatch()) {
+        display.sleep();
+      }
+    }
+  }
+
+  private void normalizeStoredWindowSize() {
+    WindowProperty windowProperty = props.getScreen(shell.getText());
+    if (windowProperty == null) {
+      props.setScreen(new WindowProperty(shell.getText(), false, -1, -1, 980, 760));
+      return;
+    }
+
+    Rectangle clientArea = shell.getDisplay().getPrimaryMonitor().getClientArea();
+    int maxHeight = (int) (clientArea.height * 0.9);
+    int maxWidth = (int) (clientArea.width * 0.95);
+    boolean changed = false;
+
+    if (windowProperty.getHeight() > maxHeight || windowProperty.getHeight() <= 0) {
+      windowProperty.setHeight(760);
+      changed = true;
+    }
+    if (windowProperty.getWidth() > maxWidth || windowProperty.getWidth() <= 0) {
+      windowProperty.setWidth(980);
+      changed = true;
+    }
+    if (windowProperty.isMaximized()) {
+      windowProperty.setMaximized(false);
+      changed = true;
+    }
+
+    if (changed) {
+      props.setScreen(windowProperty);
+    }
   }
 }
