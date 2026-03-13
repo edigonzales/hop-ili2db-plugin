@@ -51,8 +51,10 @@ public class Ili2dbDialog extends BaseTransformDialog {
   private ComboVar wFlavor;
   private ComboVar wFunction;
   private MetaSelectionLine<DatabaseMeta> wConnection;
+  private ComboVar wGpkgTargetMode;
   private TextVar wGpkgFilePath;
   private Button wbGpkgFilePath;
+  private ComboVar wGpkgFileField;
   private TextVar wSchemaName;
 
   private ComboVar wImportSourceMode;
@@ -222,6 +224,21 @@ public class Ili2dbDialog extends BaseTransformDialog {
             });
     lastControl = wConnection;
 
+    wGpkgTargetMode = new ComboVar(variables, mainComposite, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
+    wGpkgTargetMode.add("STATIC_PATH");
+    wGpkgTargetMode.add("FIELD");
+    wGpkgTargetMode.addModifyListener(
+        e -> {
+          input.setChanged();
+          enableDisableControls();
+        });
+    placeControl(
+        mainComposite,
+        BaseMessages.getString(PKG, "Ili2dbDialog.GpkgTargetMode.Label"),
+        wGpkgTargetMode,
+        lastControl);
+    lastControl = wGpkgTargetMode;
+
     wGpkgFilePath = new TextVar(variables, mainComposite, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
     wGpkgFilePath.addModifyListener(e -> input.setChanged());
     wbGpkgFilePath = new Button(mainComposite, SWT.PUSH | SWT.CENTER);
@@ -233,6 +250,16 @@ public class Ili2dbDialog extends BaseTransformDialog {
         wbGpkgFilePath,
         e -> browseSaveFile(wGpkgFilePath, new String[] {"*.gpkg", "*.*"}));
     lastControl = wGpkgFilePath;
+
+    wGpkgFileField = new ComboVar(variables, mainComposite, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
+    wGpkgFileField.addModifyListener(e -> input.setChanged());
+    placeControl(
+        mainComposite,
+        BaseMessages.getString(PKG, "Ili2dbDialog.GpkgFileField.Label"),
+        wGpkgFileField,
+        lastControl);
+    BaseTransformDialog.getFieldsFromPrevious(variables, wGpkgFileField, pipelineMeta, transformMeta);
+    lastControl = wGpkgFileField;
 
     wSchemaName = new TextVar(variables, mainComposite, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
     wSchemaName.addModifyListener(e -> input.setChanged());
@@ -680,8 +707,11 @@ public class Ili2dbDialog extends BaseTransformDialog {
     wConnection.setEnabled(isPg);
     wSchemaName.setEnabled(isPg);
 
-    wGpkgFilePath.setEnabled(!isPg);
-    wbGpkgFilePath.setEnabled(!isPg);
+    boolean gpkgFromField = "FIELD".equalsIgnoreCase(wGpkgTargetMode.getText());
+    wGpkgTargetMode.setEnabled(!isPg);
+    wGpkgFilePath.setEnabled(!isPg && !gpkgFromField);
+    wbGpkgFilePath.setEnabled(!isPg && !gpkgFromField);
+    wGpkgFileField.setEnabled(!isPg && gpkgFromField);
 
     boolean isSchemaImport = "SCHEMA_IMPORT".equalsIgnoreCase(wFunction.getText());
     boolean importFromField = "FIELD".equalsIgnoreCase(wImportSourceMode.getText());
@@ -713,7 +743,10 @@ public class Ili2dbDialog extends BaseTransformDialog {
     wFunction.setText(input.getFunction() == null ? "IMPORT" : input.getFunction());
 
     wConnection.setText(input.getConnectionName() == null ? "" : input.getConnectionName());
+    wGpkgTargetMode.setText(
+        input.getGpkgTargetMode() == null ? "STATIC_PATH" : input.getGpkgTargetMode());
     wGpkgFilePath.setText(input.getGpkgFilePath() == null ? "" : input.getGpkgFilePath());
+    wGpkgFileField.setText(input.getGpkgFileField() == null ? "" : input.getGpkgFileField());
     wSchemaName.setText(input.getSchemaName() == null ? "" : input.getSchemaName());
 
     wImportSourceMode.setText(
@@ -865,7 +898,9 @@ public class Ili2dbDialog extends BaseTransformDialog {
     input.setFunction(wFunction.getText());
 
     input.setConnectionName(wConnection.getText());
+    input.setGpkgTargetMode(wGpkgTargetMode.getText());
     input.setGpkgFilePath(wGpkgFilePath.getText());
+    input.setGpkgFileField(wGpkgFileField.getText());
     input.setSchemaName(wSchemaName.getText());
 
     input.setImportSourceMode(wImportSourceMode.getText());

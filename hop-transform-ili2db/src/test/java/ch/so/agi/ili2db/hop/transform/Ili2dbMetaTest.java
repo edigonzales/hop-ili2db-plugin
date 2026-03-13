@@ -1,6 +1,7 @@
 package ch.so.agi.ili2db.hop.transform;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.hop.core.row.RowMeta;
 import org.junit.jupiter.api.Test;
@@ -26,5 +27,15 @@ class Ili2dbMetaTest {
     assertTrue(rowMeta.indexOfValue("ili2db_connection") >= 0);
     assertTrue(rowMeta.indexOfValue("ili2db_target_file") >= 0);
     assertTrue(rowMeta.indexOfValue("ili2db_database_schema") >= 0);
+  }
+
+  @Test
+  void shouldSetDefaultGpkgTargetConfiguration() {
+    Ili2dbMeta meta = new Ili2dbMeta();
+
+    meta.setDefault();
+
+    assertEquals("STATIC_PATH", meta.getGpkgTargetMode());
+    assertEquals("", meta.getGpkgFileField());
   }
 }

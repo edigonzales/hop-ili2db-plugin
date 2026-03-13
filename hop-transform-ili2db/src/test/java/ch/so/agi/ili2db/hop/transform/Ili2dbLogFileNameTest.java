@@ -29,6 +29,15 @@ class Ili2dbLogFileNameTest {
   }
 
   @Test
+  void shouldBuildLogFileNameFromIlidataId() {
+    Ili2dbExecutionRequest request = createRequest("ilidata:ch.so.agi.mopublic");
+
+    String fileName = Ili2db.buildLogFileName(request);
+
+    assertEquals("ch.so.agi.mopublic.log", fileName);
+  }
+
+  @Test
   void shouldUseFallbackWhenImportFileIsMissing() {
     Ili2dbExecutionRequest request = createRequest(null);
 
@@ -40,6 +49,16 @@ class Ili2dbLogFileNameTest {
   @Test
   void shouldUseFallbackWhenImportFileEndsWithSeparator() {
     Ili2dbExecutionRequest request = createRequest("/tmp/data/");
+
+    String fileName = Ili2db.buildLogFileName(request);
+
+    assertTrue(fileName.matches("^ili2db-ili2gpkg-import-\\d+-\\d+\\.log$"));
+  }
+
+  @Test
+  void shouldUseFallbackWhenMultipleImportSourcesAreConfigured() {
+    Ili2dbExecutionRequest request =
+        createRequest("ilidata:ch.so.agi.mopublic;ilidata:ch.so.agi.other");
 
     String fileName = Ili2db.buildLogFileName(request);
 

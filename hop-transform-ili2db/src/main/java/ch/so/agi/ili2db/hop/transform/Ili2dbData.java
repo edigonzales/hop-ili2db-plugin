@@ -10,6 +10,7 @@ public class Ili2dbData extends BaseTransformData implements ITransformData {
   IRowMeta outputRowMeta;
 
   int inputImportFileIndex = -1;
+  int inputGpkgFileIndex = -1;
   int inputDatasetIndex = -1;
 
   int outputSuccessIndex = -1;

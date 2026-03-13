@@ -134,7 +134,8 @@ public class DefaultIli2dbExecutor implements Ili2dbExecutor {
     }
 
     if (request.getImportFile() == null || request.getImportFile().isBlank()) {
-      throw new IllegalArgumentException("Import file is required for function " + request.getFunction());
+      throw new IllegalArgumentException(
+          "Import source is required for function " + request.getFunction());
     }
   }
 

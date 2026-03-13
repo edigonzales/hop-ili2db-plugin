@@ -1,5 +1,6 @@
 package ch.so.agi.ili2db.hop.transform;
 
+import ch.so.agi.ili2db.core.GpkgTargetMode;
 import java.util.List;
 import org.apache.hop.core.CheckResult;
 import org.apache.hop.core.ICheckResult;
@@ -33,6 +34,8 @@ public class Ili2dbMeta extends BaseTransformMeta<Ili2db, Ili2dbData> {
 
   @HopMetadataProperty private String connectionName;
   @HopMetadataProperty private String gpkgFilePath;
+  @HopMetadataProperty private String gpkgTargetMode;
+  @HopMetadataProperty private String gpkgFileField;
   @HopMetadataProperty private String schemaName;
 
   @HopMetadataProperty private String importSourceMode;
@@ -77,6 +80,8 @@ public class Ili2dbMeta extends BaseTransformMeta<Ili2db, Ili2dbData> {
 
     connectionName = "";
     gpkgFilePath = "";
+    gpkgTargetMode = "STATIC_PATH";
+    gpkgFileField = "";
     schemaName = "";
 
     importSourceMode = "STATIC_PATH";
@@ -169,14 +174,26 @@ public class Ili2dbMeta extends BaseTransformMeta<Ili2db, Ili2dbData> {
       return;
     }
 
-    if ("ILI2GPKG".equalsIgnoreCase(flavor)
-        && (gpkgFilePath == null || gpkgFilePath.isBlank())) {
-      remarks.add(
-          new CheckResult(
-              ICheckResult.TYPE_RESULT_ERROR,
-              BaseMessages.getString(PKG, "Ili2dbMeta.CheckResult.GpkgTargetMissing"),
-              transformMeta));
-      return;
+    if ("ILI2GPKG".equalsIgnoreCase(flavor)) {
+      GpkgTargetMode targetMode = GpkgTargetMode.fromValue(gpkgTargetMode);
+      if (targetMode == GpkgTargetMode.STATIC_PATH
+          && (gpkgFilePath == null || gpkgFilePath.isBlank())) {
+        remarks.add(
+            new CheckResult(
+                ICheckResult.TYPE_RESULT_ERROR,
+                BaseMessages.getString(PKG, "Ili2dbMeta.CheckResult.GpkgTargetMissing"),
+                transformMeta));
+        return;
+      }
+      if (targetMode == GpkgTargetMode.FIELD
+          && (gpkgFileField == null || gpkgFileField.isBlank())) {
+        remarks.add(
+            new CheckResult(
+                ICheckResult.TYPE_RESULT_ERROR,
+                BaseMessages.getString(PKG, "Ili2dbMeta.CheckResult.GpkgFieldMissing"),
+                transformMeta));
+        return;
+      }
     }
 
     if ("FIELD".equalsIgnoreCase(importSourceMode)
@@ -260,6 +277,22 @@ public class Ili2dbMeta extends BaseTransformMeta<Ili2db, Ili2dbData> {
 
   public String getSchemaName() {
     return schemaName;
+  }
+
+  public String getGpkgTargetMode() {
+    return gpkgTargetMode;
+  }
+
+  public void setGpkgTargetMode(String gpkgTargetMode) {
+    this.gpkgTargetMode = gpkgTargetMode;
+  }
+
+  public String getGpkgFileField() {
+    return gpkgFileField;
+  }
+
+  public void setGpkgFileField(String gpkgFileField) {
+    this.gpkgFileField = gpkgFileField;
   }
 
   public void setSchemaName(String schemaName) {

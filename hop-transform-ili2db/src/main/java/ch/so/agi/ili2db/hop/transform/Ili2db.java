@@ -2,6 +2,7 @@ package ch.so.agi.ili2db.hop.transform;
 
 import ch.so.agi.ili2db.core.DatasetMode;
 import ch.so.agi.ili2db.core.DefaultIli2dbExecutor;
+import ch.so.agi.ili2db.core.GpkgTargetMode;
 import ch.so.agi.ili2db.core.Ili2dbExecutionRequest;
 import ch.so.agi.ili2db.core.Ili2dbExecutionResult;
 import ch.so.agi.ili2db.core.Ili2dbExternalLogLevel;
@@ -30,6 +31,8 @@ import org.apache.hop.pipeline.transform.TransformMeta;
 public class Ili2db extends BaseTransform<Ili2dbMeta, Ili2dbData> {
 
   private static final Class<?> PKG = Ili2dbMeta.class;
+  private static final String ILIDATA_PREFIX = "ilidata:";
+  private static final String IMPORT_SOURCE_LIST_SEPARATOR = ";";
 
   public Ili2db(
       TransformMeta transformMeta,
@@ -103,6 +106,19 @@ public class Ili2db extends BaseTransform<Ili2dbMeta, Ili2dbData> {
         throw new HopTransformException(
             BaseMessages.getString(
                 PKG, "Ili2db.Transform.ImportFieldNotFound", meta.getImportFileField()));
+      }
+    }
+
+    if ("ILI2GPKG".equalsIgnoreCase(meta.getFlavor())
+        && GpkgTargetMode.fromValue(meta.getGpkgTargetMode()) == GpkgTargetMode.FIELD) {
+      if (inputRowMeta == null) {
+        throw new HopTransformException(
+            BaseMessages.getString(PKG, "Ili2db.Transform.NoInputForGpkgField"));
+      }
+      data.inputGpkgFileIndex = inputRowMeta.indexOfValue(meta.getGpkgFileField());
+      if (data.inputGpkgFileIndex < 0) {
+        throw new HopTransformException(
+            BaseMessages.getString(PKG, "Ili2db.Transform.GpkgFieldNotFound", meta.getGpkgFileField()));
       }
     }
 
@@ -201,10 +217,8 @@ public class Ili2db extends BaseTransform<Ili2dbMeta, Ili2dbData> {
       outputTargetFile = null;
       outputDatabaseSchema = request.getSchemaName();
     } else {
-      String gpkgFile = resolve(meta.getGpkgFilePath());
-      request.setGpkgFile(gpkgFile);
-
-      String absolutePath = toAbsolutePath(gpkgFile);
+      String absolutePath = toAbsolutePath(resolveGpkgFile(row));
+      request.setGpkgFile(absolutePath);
       targetType = "FILE";
       targetId = absolutePath;
       targetJdbcUrl = buildSqliteJdbcUrl(absolutePath);
@@ -303,7 +317,25 @@ public class Ili2db extends BaseTransform<Ili2dbMeta, Ili2dbData> {
     return resolved;
   }
 
-  private String toAbsolutePath(String path) {
+  private String resolveGpkgFile(Object[] row) throws HopTransformException {
+    GpkgTargetMode mode = GpkgTargetMode.fromValue(meta.getGpkgTargetMode());
+    if (mode == GpkgTargetMode.STATIC_PATH) {
+      return resolve(meta.getGpkgFilePath());
+    }
+
+    if (row == null || data.inputGpkgFileIndex < 0) {
+      return null;
+    }
+
+    try {
+      return getInputRowMeta().getString(row, data.inputGpkgFileIndex);
+    } catch (HopValueException e) {
+      throw new HopTransformException(
+          BaseMessages.getString(PKG, "Ili2db.Transform.GpkgFieldReadError", meta.getGpkgFileField()), e);
+    }
+  }
+
+  private static String toAbsolutePath(String path) {
     if (path == null || path.isBlank()) {
       return path;
     }
@@ -347,6 +379,10 @@ public class Ili2db extends BaseTransform<Ili2dbMeta, Ili2dbData> {
       return importFileName + ".log";
     }
 
+    return buildFallbackLogFileName(request);
+  }
+
+  private static String buildFallbackLogFileName(Ili2dbExecutionRequest request) {
     String flavor = "unknown";
     String function = "unknown";
     if (request != null && request.getFlavor() != null) {
@@ -368,13 +404,55 @@ public class Ili2db extends BaseTransform<Ili2dbMeta, Ili2dbData> {
     if (trimmed.isEmpty()) {
       return null;
     }
-    String normalized = trimmed.replace('\\', '/');
-    int separatorIndex = normalized.lastIndexOf('/');
-    String fileName = separatorIndex < 0 ? normalized : normalized.substring(separatorIndex + 1);
-    if (fileName.isBlank()) {
+
+    if (trimmed.contains(IMPORT_SOURCE_LIST_SEPARATOR)) {
       return null;
     }
-    return fileName;
+
+    String fileName = trimmed;
+    if (trimmed.regionMatches(true, 0, ILIDATA_PREFIX, 0, ILIDATA_PREFIX.length())) {
+      fileName = trimmed.substring(ILIDATA_PREFIX.length());
+    } else {
+      String normalized = trimmed.replace('\\', '/');
+      int separatorIndex = normalized.lastIndexOf('/');
+      fileName = separatorIndex < 0 ? normalized : normalized.substring(separatorIndex + 1);
+    }
+
+    return sanitizeLogFileName(fileName);
+  }
+
+  private static String sanitizeLogFileName(String fileName) {
+    if (fileName == null) {
+      return null;
+    }
+
+    String trimmed = fileName.trim();
+    if (trimmed.isEmpty()) {
+      return null;
+    }
+
+    StringBuilder sanitized = new StringBuilder(trimmed.length());
+    boolean hasAllowedCharacter = false;
+    for (int i = 0; i < trimmed.length(); i++) {
+      char character = trimmed.charAt(i);
+      if (isAsciiLetterOrDigit(character) || character == '.' || character == '_' || character == '-') {
+        sanitized.append(character);
+        hasAllowedCharacter = true;
+      } else {
+        sanitized.append('_');
+      }
+    }
+
+    if (!hasAllowedCharacter) {
+      return null;
+    }
+    return sanitized.toString();
+  }
+
+  private static boolean isAsciiLetterOrDigit(char character) {
+    return (character >= 'A' && character <= 'Z')
+        || (character >= 'a' && character <= 'z')
+        || (character >= '0' && character <= '9');
   }
 
   private List<Ili2dbOptionEntry> withLogFileOption(
