@@ -1,7 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect x="4" y="8" width="56" height="48" rx="6" fill="#2f855a"/>
-  <rect x="10" y="14" width="44" height="8" rx="2" fill="#c6f6d5"/>
-  <rect x="10" y="28" width="18" height="22" rx="2" fill="#9ae6b4"/>
-  <rect x="32" y="28" width="22" height="22" rx="2" fill="#68d391"/>
-  <path d="M20 39h10M20 44h10M38 39h10M38 44h10" stroke="#22543d" stroke-width="2"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <title>ili2db – INTERLIS und Datenbank</title>
+  <desc>INTERLIS-Eckmarkierung oben links: roter Viertelkreis mit blauem Viertelkreisring. Rechts darunter ein grauer Datenbankzylinder mit zwei Unterteilungen.</desc>
+  <g id="interlis-corner">
+    <path d="M2 2H14A12 12 0 0 1 2 14Z" fill="#004489" />
+    <path d="M2 2H8A6 6 0 0 1 2 8Z" fill="#DA2520" />
+  </g>
+  <g id="task" stroke="#3D4B58" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M11 15c0-4 16-4 16 0v11c0 4-16 4-16 0Z" fill="#E9EDF1" />
+    <ellipse cx="19" cy="15" rx="8" ry="3" fill="#F8FAFB" />
+    <path d="M11 19c0 4 16 4 16 0M11 23c0 4 16 4 16 0" fill="none" />
+  </g>
 </svg>

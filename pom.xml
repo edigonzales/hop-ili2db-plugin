@@ -3,13 +3,13 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>ch.so.agi.ili2db</groupId>
+  <groupId>ch.so.agi</groupId>
   <artifactId>hop-ili2db-plugin</artifactId>
   <version>0.1.0-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Hop INTERLIS ili2db Plugin</name>
-  <description>Apache Hop 2.17 plugin (Action + Transform) for INTERLIS ili2db import/validate</description>
+  <description>Apache Hop 2.19 plugin (Action + Transform) for INTERLIS ili2db import/validate</description>
 
   <modules>
     <module>ili2db-core</module>
@@ -20,13 +20,14 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.release>17</maven.compiler.release>
-    <hop.version>2.17.0</hop.version>
+    <maven.compiler.release>21</maven.compiler.release>
+    <hop.version>2.19.0</hop.version>
     <ili2db.version>5.5.1</ili2db.version>
     <sqlite.jdbc.version>3.45.3.0</sqlite.jdbc.version>
     <postgresql.jdbc.version>42.7.3</postgresql.jdbc.version>
     <jandex.version>3.2.2</jandex.version>
     <junit.jupiter.version>5.11.4</junit.jupiter.version>
+    <ui.test.argLine></ui.test.argLine>
   </properties>
 
   <dependencyManagement>
@@ -90,6 +91,19 @@
       <name>jars.interlis.ch</name>
       <url>https://jars.interlis.ch/</url>
     </repository>
+    <repository>
+      <id>sogeo-snapshots</id>
+      <name>INTERLIS Guru Maven snapshots</name>
+      <url>https://jars.interlis.guru/snapshots/</url>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+        <updatePolicy>always</updatePolicy>
+        <checksumPolicy>fail</checksumPolicy>
+      </snapshots>
+    </repository>
   </repositories>
 
   <build>
@@ -114,6 +128,7 @@
           <version>3.5.2</version>
           <configuration>
             <useModulePath>false</useModulePath>
+            <argLine>${ui.test.argLine}</argLine>
           </configuration>
         </plugin>
         <plugin>
@@ -139,4 +154,31 @@
       </plugins>
     </pluginManagement>
   </build>
+
+  <profiles>
+    <profile>
+      <id>mac-arm64</id>
+      <activation>
+        <os>
+          <family>mac</family>
+          <arch>aarch64</arch>
+        </os>
+      </activation>
+      <properties>
+        <ui.test.argLine>-XstartOnFirstThread</ui.test.argLine>
+      </properties>
+    </profile>
+    <profile>
+      <id>mac-intel</id>
+      <activation>
+        <os>
+          <family>mac</family>
+          <arch>x86_64</arch>
+        </os>
+      </activation>
+      <properties>
+        <ui.test.argLine>-XstartOnFirstThread</ui.test.argLine>
+      </properties>
+    </profile>
+  </profiles>
 </project>

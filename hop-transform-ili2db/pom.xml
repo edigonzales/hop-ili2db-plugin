@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>ch.so.agi.ili2db</groupId>
+    <groupId>ch.so.agi</groupId>
     <artifactId>hop-ili2db-plugin</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
@@ -15,7 +15,7 @@
 
   <dependencies>
     <dependency>
-      <groupId>ch.so.agi.ili2db</groupId>
+      <groupId>ch.so.agi</groupId>
       <artifactId>ili2db-core</artifactId>
       <version>${project.version}</version>
     </dependency>
@@ -88,7 +88,6 @@
                   <exclude>org.slf4j:slf4j-api</exclude>
                   <exclude>org.slf4j:slf4j-nop</exclude>
                   <exclude>org.junit.jupiter:junit-jupiter</exclude>
-                  <exclude>antlr:antlr</exclude>
                 </excludes>
               </artifactSet>
               <filters>

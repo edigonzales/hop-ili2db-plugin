@@ -1,6 +1,13 @@
 # hop-ili2db-plugin
 
-Apache Hop 2.17 plugin suite for INTERLIS `ili2db` (Transform + Action).
+Apache Hop 2.19.0 plugin suite for INTERLIS `ili2db` (Transform + Action).
+
+The installable artifacts remain separate ZIPs:
+
+- `ch.so.agi:hop-action-ili2db:0.1.0-SNAPSHOT` (`packaging=zip`)
+- `ch.so.agi:hop-transform-ili2db:0.1.0-SNAPSHOT` (`packaging=zip`)
+
+The Java baseline is release 21. The CI compatibility matrix also tests Java 25.
 
 ## Implemented scope
 
@@ -40,6 +47,10 @@ Full build:
 mvn clean verify
 ```
 
+The standard Maven options used by CI are `-U -B -ntp`. The root POM resolves
+normal Maven snapshots from `https://jars.interlis.guru/snapshots/`; consumers
+should declare `0.1.0-SNAPSHOT`, not a timestamped snapshot version.
+
 Fast plugin build (skip tests):
 
 ```bash
@@ -52,8 +63,36 @@ Root `pom.xml` uses:
 
 1. Maven Central
 2. `https://jars.interlis.ch/`
+3. `https://jars.interlis.guru/snapshots/` for snapshots
 
-`jars.sogeo.services/mirror` is not configured.
+The snapshot repository is enabled only for snapshots and uses Maven's normal
+metadata resolution.
+
+## CI and publication
+
+The workflow matrix runs Ubuntu, macOS and Windows with Java 21 and 25. Only
+the Ubuntu/Java 21 job runs `clean verify`, validates both ZIPs and runs the
+installed-Hop E2E. The other five jobs run `clean test` for compatibility.
+
+Pull requests never publish artifacts. A successful push to `main` publishes
+the exact two ZIPs produced and verified by the canonical job; publication does
+not rebuild them and does not create GitHub plugin releases. Maven publication
+uses the protected repository secrets `INTERLIS_MAVEN_USERNAME` and
+`INTERLIS_MAVEN_TOKEN`.
+
+The local checks can be run with:
+
+```bash
+python3 scripts/verify-packages.py
+python3 scripts/run-e2e.py
+```
+
+`verify-packages.py` checks exact ZIP names, installation roots, safe paths,
+one shaded plugin JAR per ZIP, Jandex metadata, the shared `ili2db.svg` icon,
+and the absence of embedded Hop/SWT classes. `run-e2e.py` downloads and
+SHA-512-verifies Apache Hop 2.19.0, installs both ZIPs into a clean Hop home,
+and runs one GeoPackage import through the transform and one through the
+action using `e2e/fixtures`.
 
 ## Install in Hop
 
