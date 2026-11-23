@@ -83,7 +83,7 @@ public class DefaultIli2dbExecutor implements Ili2dbExecutor {
 
       adapter.applyTarget(config, request);
 
-      Ili2dbOptionApplier.apply(config, flavor, function, request.getOptionEntries());
+      Ili2dbOptionApplier.apply(config, flavor, request.getOptionEntries());
 
       if (function == Ili2dbFunction.IMPORT
           || function == Ili2dbFunction.REPLACE

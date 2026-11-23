@@ -1,7 +1,8 @@
 package ch.so.agi.ili2db.hop.transform;
 
-import ch.so.agi.ili2db.core.GpkgTargetMode;
+import ch.so.agi.hop.commons.core.SourceMode;
 import java.util.List;
+import java.util.Objects;
 import org.apache.hop.core.CheckResult;
 import org.apache.hop.core.ICheckResult;
 import org.apache.hop.core.annotations.Transform;
@@ -34,11 +35,11 @@ public class Ili2dbMeta extends BaseTransformMeta<Ili2db, Ili2dbData> {
 
   @HopMetadataProperty private String connectionName;
   @HopMetadataProperty private String gpkgFilePath;
-  @HopMetadataProperty private String gpkgTargetMode;
+  @HopMetadataProperty private SourceMode gpkgTargetMode = SourceMode.CONFIGURED;
   @HopMetadataProperty private String gpkgFileField;
   @HopMetadataProperty private String schemaName;
 
-  @HopMetadataProperty private String importSourceMode;
+  @HopMetadataProperty private SourceMode importSourceMode = SourceMode.CONFIGURED;
   @HopMetadataProperty private String importFilePath;
   @HopMetadataProperty private String importFileField;
 
@@ -52,7 +53,7 @@ public class Ili2dbMeta extends BaseTransformMeta<Ili2db, Ili2dbData> {
 
   @HopMetadataProperty private String serializedOptions;
 
-  @HopMetadataProperty private String datasetMode;
+  @HopMetadataProperty private SourceMode datasetMode = SourceMode.CONFIGURED;
   @HopMetadataProperty private String datasetName;
   @HopMetadataProperty private String datasetField;
 
@@ -80,11 +81,11 @@ public class Ili2dbMeta extends BaseTransformMeta<Ili2db, Ili2dbData> {
 
     connectionName = "";
     gpkgFilePath = "";
-    gpkgTargetMode = "STATIC_PATH";
+    gpkgTargetMode = SourceMode.CONFIGURED;
     gpkgFileField = "";
     schemaName = "";
 
-    importSourceMode = "STATIC_PATH";
+    importSourceMode = SourceMode.CONFIGURED;
     importFilePath = "";
     importFileField = "";
 
@@ -98,7 +99,7 @@ public class Ili2dbMeta extends BaseTransformMeta<Ili2db, Ili2dbData> {
 
     serializedOptions = "";
 
-    datasetMode = "STATIC";
+    datasetMode = SourceMode.CONFIGURED;
     datasetName = "";
     datasetField = "";
 
@@ -175,8 +176,7 @@ public class Ili2dbMeta extends BaseTransformMeta<Ili2db, Ili2dbData> {
     }
 
     if ("ILI2GPKG".equalsIgnoreCase(flavor)) {
-      GpkgTargetMode targetMode = GpkgTargetMode.fromValue(gpkgTargetMode);
-      if (targetMode == GpkgTargetMode.STATIC_PATH
+      if (gpkgTargetMode != SourceMode.FIELD
           && (gpkgFilePath == null || gpkgFilePath.isBlank())) {
         remarks.add(
             new CheckResult(
@@ -185,7 +185,7 @@ public class Ili2dbMeta extends BaseTransformMeta<Ili2db, Ili2dbData> {
                 transformMeta));
         return;
       }
-      if (targetMode == GpkgTargetMode.FIELD
+      if (gpkgTargetMode == SourceMode.FIELD
           && (gpkgFileField == null || gpkgFileField.isBlank())) {
         remarks.add(
             new CheckResult(
@@ -196,7 +196,9 @@ public class Ili2dbMeta extends BaseTransformMeta<Ili2db, Ili2dbData> {
       }
     }
 
-    if ("FIELD".equalsIgnoreCase(importSourceMode)
+    boolean schemaImport = "SCHEMA_IMPORT".equalsIgnoreCase(function);
+    if (!schemaImport
+        && importSourceMode == SourceMode.FIELD
         && (importFileField == null || importFileField.isBlank())) {
       remarks.add(
           new CheckResult(
@@ -206,8 +208,8 @@ public class Ili2dbMeta extends BaseTransformMeta<Ili2db, Ili2dbData> {
       return;
     }
 
-    if (!"SCHEMA_IMPORT".equalsIgnoreCase(function)
-        && "STATIC_PATH".equalsIgnoreCase(importSourceMode)
+    if (!schemaImport
+        && importSourceMode != SourceMode.FIELD
         && (importFilePath == null || importFilePath.isBlank())) {
       remarks.add(
           new CheckResult(
@@ -217,7 +219,7 @@ public class Ili2dbMeta extends BaseTransformMeta<Ili2db, Ili2dbData> {
       return;
     }
 
-    if ("FIELD".equalsIgnoreCase(datasetMode)
+    if (datasetMode == SourceMode.FIELD
         && (datasetField == null || datasetField.isBlank())) {
       remarks.add(
           new CheckResult(
@@ -279,11 +281,11 @@ public class Ili2dbMeta extends BaseTransformMeta<Ili2db, Ili2dbData> {
     return schemaName;
   }
 
-  public String getGpkgTargetMode() {
-    return gpkgTargetMode;
+  public SourceMode getGpkgTargetMode() {
+    return Objects.requireNonNullElse(gpkgTargetMode, SourceMode.CONFIGURED);
   }
 
-  public void setGpkgTargetMode(String gpkgTargetMode) {
+  public void setGpkgTargetMode(SourceMode gpkgTargetMode) {
     this.gpkgTargetMode = gpkgTargetMode;
   }
 
@@ -299,11 +301,11 @@ public class Ili2dbMeta extends BaseTransformMeta<Ili2db, Ili2dbData> {
     this.schemaName = schemaName;
   }
 
-  public String getImportSourceMode() {
-    return importSourceMode;
+  public SourceMode getImportSourceMode() {
+    return Objects.requireNonNullElse(importSourceMode, SourceMode.CONFIGURED);
   }
 
-  public void setImportSourceMode(String importSourceMode) {
+  public void setImportSourceMode(SourceMode importSourceMode) {
     this.importSourceMode = importSourceMode;
   }
 
@@ -387,11 +389,11 @@ public class Ili2dbMeta extends BaseTransformMeta<Ili2db, Ili2dbData> {
     this.serializedOptions = serializedOptions;
   }
 
-  public String getDatasetMode() {
-    return datasetMode;
+  public SourceMode getDatasetMode() {
+    return Objects.requireNonNullElse(datasetMode, SourceMode.CONFIGURED);
   }
 
-  public void setDatasetMode(String datasetMode) {
+  public void setDatasetMode(SourceMode datasetMode) {
     this.datasetMode = datasetMode;
   }
 

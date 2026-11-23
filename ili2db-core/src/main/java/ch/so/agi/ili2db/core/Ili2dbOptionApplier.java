@@ -15,7 +15,6 @@ public final class Ili2dbOptionApplier {
   public static void apply(
       Config config,
       Ili2dbFlavor flavor,
-      Ili2dbFunction function,
       List<Ili2dbOptionEntry> optionEntries) {
     if (optionEntries == null || optionEntries.isEmpty()) {
       return;
@@ -29,7 +28,7 @@ public final class Ili2dbOptionApplier {
       if (definition != null) {
         validateEntryType(definition, entry.getValue());
       }
-      if (definition != null && !definition.appliesTo(flavor, function)) {
+      if (definition != null && !definition.appliesTo(flavor)) {
         continue;
       }
       applySingle(config, flavor, entry.getKey(), entry.getValue());
@@ -37,28 +36,28 @@ public final class Ili2dbOptionApplier {
   }
 
   private static void validateEntryType(Ili2dbOptionDefinition definition, String value) {
-    if (definition.getType() == Ili2dbOptionType.STRING) {
+    if (definition.type() == Ili2dbOptionType.STRING) {
       return;
     }
-    if (definition.getType() == Ili2dbOptionType.INTEGER) {
+    if (definition.type() == Ili2dbOptionType.INTEGER) {
       if (value == null || value.isBlank()) {
-        throw new IllegalArgumentException("Missing integer value for option '" + definition.getKey() + "'");
+        throw new IllegalArgumentException("Missing integer value for option '" + definition.key() + "'");
       }
       try {
         Integer.parseInt(value.trim());
       } catch (NumberFormatException e) {
         throw new IllegalArgumentException(
-            "Invalid integer value for option '" + definition.getKey() + "': " + value, e);
+            "Invalid integer value for option '" + definition.key() + "': " + value, e);
       }
       return;
     }
-    if (definition.getType() == Ili2dbOptionType.BOOLEAN) {
+    if (definition.type() == Ili2dbOptionType.BOOLEAN) {
       if (value == null || value.isBlank()) {
         return;
       }
       if (!isBooleanToken(value)) {
         throw new IllegalArgumentException(
-            "Invalid boolean value for option '" + definition.getKey() + "': " + value);
+            "Invalid boolean value for option '" + definition.key() + "': " + value);
       }
     }
   }

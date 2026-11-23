@@ -1,6 +1,8 @@
 package ch.so.agi.ili2db.core;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import ch.ehi.ili2db.gui.Config;
@@ -18,7 +20,6 @@ class Ili2dbOptionApplierTest {
             Ili2dbOptionApplier.apply(
                 config,
                 Ili2dbFlavor.ILI2PG,
-                Ili2dbFunction.IMPORT,
                 List.of(new Ili2dbOptionEntry("disableRounding", true, "true"))));
   }
 
@@ -32,7 +33,6 @@ class Ili2dbOptionApplierTest {
             Ili2dbOptionApplier.apply(
                 config,
                 Ili2dbFlavor.ILI2PG,
-                Ili2dbFunction.IMPORT,
                 List.of(new Ili2dbOptionEntry("disableRounding", true, "maybe"))));
   }
 
@@ -46,7 +46,19 @@ class Ili2dbOptionApplierTest {
             Ili2dbOptionApplier.apply(
                 config,
                 Ili2dbFlavor.ILI2PG,
-                Ili2dbFunction.IMPORT,
                 List.of(new Ili2dbOptionEntry("proxyPort", true, "abc"))));
+  }
+
+  @Test
+  void appliesPostgresqlOptionOnlyToPostgresql() {
+    var options = List.of(new Ili2dbOptionEntry("setupPgExt", true, "true"));
+    Config gpkg = new Config();
+    Config pg = new Config();
+
+    Ili2dbOptionApplier.apply(gpkg, Ili2dbFlavor.ILI2GPKG, options);
+    Ili2dbOptionApplier.apply(pg, Ili2dbFlavor.ILI2PG, options);
+
+    assertFalse(gpkg.isSetupPgExt());
+    assertTrue(pg.isSetupPgExt());
   }
 }
