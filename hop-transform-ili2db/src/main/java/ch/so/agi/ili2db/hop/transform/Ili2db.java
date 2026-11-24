@@ -1,8 +1,6 @@
 package ch.so.agi.ili2db.hop.transform;
 
-import ch.so.agi.ili2db.core.DatasetMode;
 import ch.so.agi.ili2db.core.DefaultIli2dbExecutor;
-import ch.so.agi.ili2db.core.GpkgTargetMode;
 import ch.so.agi.ili2db.core.Ili2dbExecutionRequest;
 import ch.so.agi.ili2db.core.Ili2dbExecutionResult;
 import ch.so.agi.ili2db.core.Ili2dbExternalLogLevel;
@@ -10,7 +8,7 @@ import ch.so.agi.ili2db.core.Ili2dbFlavor;
 import ch.so.agi.ili2db.core.Ili2dbFunction;
 import ch.so.agi.ili2db.core.Ili2dbOptionCodec;
 import ch.so.agi.ili2db.core.Ili2dbOptionEntry;
-import ch.so.agi.ili2db.core.ImportSourceMode;
+import ch.so.agi.hop.commons.core.SourceMode;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -82,7 +80,8 @@ public class Ili2db extends BaseTransform<Ili2dbMeta, Ili2dbData> {
   private void initializeData() throws HopTransformException {
     IRowMeta inputRowMeta = getInputRowMeta();
 
-    if ("SCHEMA_IMPORT".equalsIgnoreCase(meta.getFunction()) && inputRowMeta != null) {
+    boolean schemaImport = "SCHEMA_IMPORT".equalsIgnoreCase(meta.getFunction());
+    if (schemaImport && inputRowMeta != null) {
       throw new HopTransformException(
           BaseMessages.getString(PKG, "Ili2db.Transform.SchemaImportWithInputNotSupported"));
     }
@@ -96,7 +95,7 @@ public class Ili2db extends BaseTransform<Ili2dbMeta, Ili2dbData> {
         this,
         getPipelineMeta().getMetadataProvider());
 
-    if ("FIELD".equalsIgnoreCase(meta.getImportSourceMode())) {
+    if (!schemaImport && meta.getImportSourceMode() == SourceMode.FIELD) {
       if (inputRowMeta == null) {
         throw new HopTransformException(
             BaseMessages.getString(PKG, "Ili2db.Transform.NoInputForImportField"));
@@ -110,7 +109,7 @@ public class Ili2db extends BaseTransform<Ili2dbMeta, Ili2dbData> {
     }
 
     if ("ILI2GPKG".equalsIgnoreCase(meta.getFlavor())
-        && GpkgTargetMode.fromValue(meta.getGpkgTargetMode()) == GpkgTargetMode.FIELD) {
+        && meta.getGpkgTargetMode() == SourceMode.FIELD) {
       if (inputRowMeta == null) {
         throw new HopTransformException(
             BaseMessages.getString(PKG, "Ili2db.Transform.NoInputForGpkgField"));
@@ -122,7 +121,7 @@ public class Ili2db extends BaseTransform<Ili2dbMeta, Ili2dbData> {
       }
     }
 
-    if ("FIELD".equalsIgnoreCase(meta.getDatasetMode())) {
+    if (meta.getDatasetMode() == SourceMode.FIELD) {
       if (inputRowMeta == null) {
         throw new HopTransformException(
             BaseMessages.getString(PKG, "Ili2db.Transform.NoInputForDatasetField"));
@@ -269,8 +268,7 @@ public class Ili2db extends BaseTransform<Ili2dbMeta, Ili2dbData> {
       return null;
     }
 
-    ImportSourceMode mode = ImportSourceMode.fromValue(meta.getImportSourceMode());
-    if (mode == ImportSourceMode.STATIC_PATH) {
+    if (meta.getImportSourceMode() != SourceMode.FIELD) {
       return resolve(meta.getImportFilePath());
     }
 
@@ -287,8 +285,7 @@ public class Ili2db extends BaseTransform<Ili2dbMeta, Ili2dbData> {
   }
 
   private String resolveDatasetValue(Object[] row) throws HopTransformException {
-    DatasetMode mode = DatasetMode.fromValue(meta.getDatasetMode());
-    if (mode == DatasetMode.STATIC) {
+    if (meta.getDatasetMode() != SourceMode.FIELD) {
       return resolve(meta.getDatasetName());
     }
 
@@ -318,8 +315,7 @@ public class Ili2db extends BaseTransform<Ili2dbMeta, Ili2dbData> {
   }
 
   private String resolveGpkgFile(Object[] row) throws HopTransformException {
-    GpkgTargetMode mode = GpkgTargetMode.fromValue(meta.getGpkgTargetMode());
-    if (mode == GpkgTargetMode.STATIC_PATH) {
+    if (meta.getGpkgTargetMode() != SourceMode.FIELD) {
       return resolve(meta.getGpkgFilePath());
     }
 

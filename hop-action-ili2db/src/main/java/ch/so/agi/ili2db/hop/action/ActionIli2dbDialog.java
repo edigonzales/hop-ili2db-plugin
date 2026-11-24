@@ -1,7 +1,6 @@
 package ch.so.agi.ili2db.hop.action;
 
 import ch.so.agi.ili2db.core.Ili2dbFlavor;
-import ch.so.agi.ili2db.core.Ili2dbFunction;
 import ch.so.agi.ili2db.core.Ili2dbOptionCatalog;
 import ch.so.agi.ili2db.core.Ili2dbOptionCodec;
 import ch.so.agi.ili2db.core.Ili2dbOptionDefinition;
@@ -189,7 +188,6 @@ public class ActionIli2dbDialog extends ActionDialog {
         e -> {
           action.setChanged();
           enableDisableControls();
-          refreshOptionsTable();
         });
     placeControl(
         mainComposite,
@@ -530,20 +528,19 @@ public class ActionIli2dbDialog extends ActionDialog {
     wOptions.removeAll();
 
     Ili2dbFlavor flavor = Ili2dbFlavor.fromValue(wFlavor.getText());
-    Ili2dbFunction function = Ili2dbFunction.fromValue(wFunction.getText());
 
     for (Ili2dbOptionDefinition definition : Ili2dbOptionCatalog.allDefinitions()) {
-      Ili2dbOptionEntry existingEntry = existing.get(definition.getKey().toLowerCase(Locale.ROOT));
-      boolean applies = definition.appliesTo(flavor, function);
+      Ili2dbOptionEntry existingEntry = existing.get(definition.key().toLowerCase(Locale.ROOT));
+      boolean applies = definition.appliesTo(flavor);
       boolean enabled = existingEntry != null && existingEntry.isEnabled() && applies;
       String value = existingEntry == null || existingEntry.getValue() == null ? "" : existingEntry.getValue();
 
       TableItem item =
           wOptions.add(
-              definition.getKey(),
+              definition.key(),
               enabled ? "Y" : "N",
               value,
-              definition.getType().name(),
+              definition.type().name(),
               applies
                   ? BaseMessages.getString(PKG, "ActionIli2dbDialog.Options.Applicable.Yes")
                   : BaseMessages.getString(PKG, "ActionIli2dbDialog.Options.Applicable.No"));

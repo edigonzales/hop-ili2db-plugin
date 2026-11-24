@@ -1,16 +1,20 @@
 package ch.so.agi.ili2db.hop.transform;
 
 import ch.so.agi.ili2db.core.Ili2dbFlavor;
-import ch.so.agi.ili2db.core.Ili2dbFunction;
 import ch.so.agi.ili2db.core.Ili2dbOptionCatalog;
 import ch.so.agi.ili2db.core.Ili2dbOptionCodec;
 import ch.so.agi.ili2db.core.Ili2dbOptionDefinition;
 import ch.so.agi.ili2db.core.Ili2dbOptionEntry;
+import ch.so.agi.hop.commons.core.ValueOrField;
+import ch.so.agi.hop.commons.ui.EditorKind;
+import ch.so.agi.hop.commons.ui.ValueOrFieldControl;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import org.apache.hop.core.database.DatabaseMeta;
+import org.apache.hop.core.exception.HopTransformException;
 import org.apache.hop.core.util.Utils;
 import org.apache.hop.core.variables.IVariables;
 import org.apache.hop.i18n.BaseMessages;
@@ -51,16 +55,10 @@ public class Ili2dbDialog extends BaseTransformDialog {
   private ComboVar wFlavor;
   private ComboVar wFunction;
   private MetaSelectionLine<DatabaseMeta> wConnection;
-  private ComboVar wGpkgTargetMode;
-  private TextVar wGpkgFilePath;
-  private Button wbGpkgFilePath;
-  private ComboVar wGpkgFileField;
+  private ValueOrFieldControl wGpkgTarget;
   private TextVar wSchemaName;
 
-  private ComboVar wImportSourceMode;
-  private TextVar wImportFilePath;
-  private Button wbImportFilePath;
-  private ComboVar wImportFileField;
+  private ValueOrFieldControl wImportSource;
 
   private TextVar wModelName;
   private TextVar wModelDir;
@@ -73,9 +71,7 @@ public class Ili2dbDialog extends BaseTransformDialog {
 
   private TableView wOptions;
 
-  private ComboVar wDatasetMode;
-  private TextVar wDatasetName;
-  private ComboVar wDatasetField;
+  private ValueOrFieldControl wDataset;
 
   private Text wOutputConnectionField;
   private Text wOutputTargetFileField;
@@ -205,7 +201,6 @@ public class Ili2dbDialog extends BaseTransformDialog {
         e -> {
           input.setChanged();
           enableDisableControls();
-          refreshOptionsTable();
         });
     placeControl(
         mainComposite,
@@ -224,42 +219,21 @@ public class Ili2dbDialog extends BaseTransformDialog {
             });
     lastControl = wConnection;
 
-    wGpkgTargetMode = new ComboVar(variables, mainComposite, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
-    wGpkgTargetMode.add("STATIC_PATH");
-    wGpkgTargetMode.add("FIELD");
-    wGpkgTargetMode.addModifyListener(
-        e -> {
-          input.setChanged();
-          enableDisableControls();
-        });
+    wGpkgTarget =
+        ValueOrFieldControl.builder(mainComposite, variables)
+            .editor(EditorKind.FILE_SAVE)
+            .fileExtensions("*.gpkg", "*.*")
+            .browseStrategy((parent, vars, value, editor, extensions, names) ->
+                browseLocalFile(parent, value, editor, extensions))
+            .fieldProvider(this::previousFieldNames)
+            .onChange(input::setChanged)
+            .build();
     placeControl(
-        mainComposite,
-        BaseMessages.getString(PKG, "Ili2dbDialog.GpkgTargetMode.Label"),
-        wGpkgTargetMode,
-        lastControl);
-    lastControl = wGpkgTargetMode;
-
-    wGpkgFilePath = new TextVar(variables, mainComposite, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
-    wGpkgFilePath.addModifyListener(e -> input.setChanged());
-    wbGpkgFilePath = new Button(mainComposite, SWT.PUSH | SWT.CENTER);
-    placeControlWithBrowse(
         mainComposite,
         BaseMessages.getString(PKG, "Ili2dbDialog.GpkgTarget.Label"),
-        wGpkgFilePath,
-        lastControl,
-        wbGpkgFilePath,
-        e -> browseSaveFile(wGpkgFilePath, new String[] {"*.gpkg", "*.*"}));
-    lastControl = wGpkgFilePath;
-
-    wGpkgFileField = new ComboVar(variables, mainComposite, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
-    wGpkgFileField.addModifyListener(e -> input.setChanged());
-    placeControl(
-        mainComposite,
-        BaseMessages.getString(PKG, "Ili2dbDialog.GpkgFileField.Label"),
-        wGpkgFileField,
+        wGpkgTarget,
         lastControl);
-    BaseTransformDialog.getFieldsFromPrevious(variables, wGpkgFileField, pipelineMeta, transformMeta);
-    lastControl = wGpkgFileField;
+    lastControl = wGpkgTarget;
 
     wSchemaName = new TextVar(variables, mainComposite, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
     wSchemaName.addModifyListener(e -> input.setChanged());
@@ -270,42 +244,21 @@ public class Ili2dbDialog extends BaseTransformDialog {
         lastControl);
     lastControl = wSchemaName;
 
-    wImportSourceMode = new ComboVar(variables, mainComposite, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
-    wImportSourceMode.add("STATIC_PATH");
-    wImportSourceMode.add("FIELD");
-    wImportSourceMode.addModifyListener(
-        e -> {
-          input.setChanged();
-          enableDisableControls();
-        });
+    wImportSource =
+        ValueOrFieldControl.builder(mainComposite, variables)
+            .editor(EditorKind.FILE_OPEN)
+            .fileExtensions("*.xtf", "*.xml", "*.itf", "*.*")
+            .browseStrategy((parent, vars, value, editor, extensions, names) ->
+                browseLocalFile(parent, value, editor, extensions))
+            .fieldProvider(this::previousFieldNames)
+            .onChange(input::setChanged)
+            .build();
     placeControl(
-        mainComposite,
-        BaseMessages.getString(PKG, "Ili2dbDialog.ImportSourceMode.Label"),
-        wImportSourceMode,
-        lastControl);
-    lastControl = wImportSourceMode;
-
-    wImportFilePath = new TextVar(variables, mainComposite, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
-    wImportFilePath.addModifyListener(e -> input.setChanged());
-    wbImportFilePath = new Button(mainComposite, SWT.PUSH | SWT.CENTER);
-    placeControlWithBrowse(
         mainComposite,
         BaseMessages.getString(PKG, "Ili2dbDialog.ImportFilePath.Label"),
-        wImportFilePath,
-        lastControl,
-        wbImportFilePath,
-        e -> browseFile(wImportFilePath, new String[] {"*.xtf", "*.xml", "*.itf", "*.*"}));
-    lastControl = wImportFilePath;
-
-    wImportFileField = new ComboVar(variables, mainComposite, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
-    wImportFileField.addModifyListener(e -> input.setChanged());
-    placeControl(
-        mainComposite,
-        BaseMessages.getString(PKG, "Ili2dbDialog.ImportFileField.Label"),
-        wImportFileField,
+        wImportSource,
         lastControl);
-    BaseTransformDialog.getFieldsFromPrevious(variables, wImportFileField, pipelineMeta, transformMeta);
-    lastControl = wImportFileField;
+    lastControl = wImportSource;
 
     wModelName = new TextVar(variables, mainComposite, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
     wModelName.addModifyListener(e -> input.setChanged());
@@ -451,40 +404,17 @@ public class Ili2dbDialog extends BaseTransformDialog {
     layout.marginHeight = PropsUi.getFormMargin();
     datasetComposite.setLayout(layout);
 
-    Control lastControl = null;
-
-    wDatasetMode = new ComboVar(variables, datasetComposite, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
-    wDatasetMode.add("STATIC");
-    wDatasetMode.add("FIELD");
-    wDatasetMode.addModifyListener(
-        e -> {
-          input.setChanged();
-          enableDisableControls();
-        });
-    placeControl(
-        datasetComposite,
-        BaseMessages.getString(PKG, "Ili2dbDialog.DatasetMode.Label"),
-        wDatasetMode,
-        lastControl);
-    lastControl = wDatasetMode;
-
-    wDatasetName = new TextVar(variables, datasetComposite, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
-    wDatasetName.addModifyListener(e -> input.setChanged());
+    wDataset =
+        ValueOrFieldControl.builder(datasetComposite, variables)
+            .editor(EditorKind.TEXT)
+            .fieldProvider(this::previousFieldNames)
+            .onChange(input::setChanged)
+            .build();
     placeControl(
         datasetComposite,
         BaseMessages.getString(PKG, "Ili2dbDialog.DatasetName.Label"),
-        wDatasetName,
-        lastControl);
-    lastControl = wDatasetName;
-
-    wDatasetField = new ComboVar(variables, datasetComposite, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
-    wDatasetField.addModifyListener(e -> input.setChanged());
-    placeControl(
-        datasetComposite,
-        BaseMessages.getString(PKG, "Ili2dbDialog.DatasetField.Label"),
-        wDatasetField,
-        lastControl);
-    BaseTransformDialog.getFieldsFromPrevious(variables, wDatasetField, pipelineMeta, transformMeta);
+        wDataset,
+        null);
 
     datasetTab.setControl(datasetComposite);
   }
@@ -622,33 +552,23 @@ public class Ili2dbDialog extends BaseTransformDialog {
     control.setLayoutData(fdControl);
   }
 
-  private void browseFile(TextVar textVar, String[] filterExtensions) {
-    FileDialog dialog = new FileDialog(shell, SWT.OPEN);
-    dialog.setFilterExtensions(filterExtensions);
-    String currentPath = textVar.getText();
-    if (currentPath != null && !currentPath.isEmpty()) {
-      dialog.setFileName(currentPath);
-    }
-    String path = dialog.open();
-    if (path != null) {
-      textVar.setText(path);
-      input.setChanged();
-    }
+  private String[] previousFieldNames() throws HopTransformException {
+    var fields = pipelineMeta.getPrevTransformFields(variables, transformName);
+    return fields == null ? new String[0] : fields.getFieldNames();
   }
 
-  private void browseSaveFile(TextVar textVar, String[] filterExtensions) {
-    FileDialog dialog = new FileDialog(shell, SWT.SAVE);
-    dialog.setFilterExtensions(filterExtensions);
-    dialog.setOverwrite(true);
-    String currentPath = textVar.getText();
-    if (currentPath != null && !currentPath.isEmpty()) {
-      dialog.setFileName(currentPath);
+  private static Optional<String> browseLocalFile(
+      Shell parent, String value, EditorKind editor, String[] extensions) {
+    boolean save = editor == EditorKind.FILE_SAVE;
+    FileDialog dialog = new FileDialog(parent, save ? SWT.SAVE : SWT.OPEN);
+    dialog.setFilterExtensions(extensions);
+    if (save) {
+      dialog.setOverwrite(true);
     }
-    String path = dialog.open();
-    if (path != null) {
-      textVar.setText(path);
-      input.setChanged();
+    if (!value.isEmpty()) {
+      dialog.setFileName(value);
     }
+    return Optional.ofNullable(dialog.open());
   }
 
   private void browseDirectory(TextVar textVar) {
@@ -707,22 +627,8 @@ public class Ili2dbDialog extends BaseTransformDialog {
     wConnection.setEnabled(isPg);
     wSchemaName.setEnabled(isPg);
 
-    boolean gpkgFromField = "FIELD".equalsIgnoreCase(wGpkgTargetMode.getText());
-    wGpkgTargetMode.setEnabled(!isPg);
-    wGpkgFilePath.setEnabled(!isPg && !gpkgFromField);
-    wbGpkgFilePath.setEnabled(!isPg && !gpkgFromField);
-    wGpkgFileField.setEnabled(!isPg && gpkgFromField);
-
-    boolean isSchemaImport = "SCHEMA_IMPORT".equalsIgnoreCase(wFunction.getText());
-    boolean importFromField = "FIELD".equalsIgnoreCase(wImportSourceMode.getText());
-
-    wImportFilePath.setEnabled(!isSchemaImport && !importFromField);
-    wbImportFilePath.setEnabled(!isSchemaImport && !importFromField);
-    wImportFileField.setEnabled(!isSchemaImport && importFromField);
-
-    boolean datasetFromField = "FIELD".equalsIgnoreCase(wDatasetMode.getText());
-    wDatasetName.setEnabled(!datasetFromField);
-    wDatasetField.setEnabled(datasetFromField);
+    wGpkgTarget.setEnabled(!isPg);
+    wImportSource.setEnabled(!"SCHEMA_IMPORT".equalsIgnoreCase(wFunction.getText()));
 
     boolean createLogFile = wCreateLogFile != null && wCreateLogFile.getSelection();
     if (wLogDirectory != null) {
@@ -743,16 +649,12 @@ public class Ili2dbDialog extends BaseTransformDialog {
     wFunction.setText(input.getFunction() == null ? "IMPORT" : input.getFunction());
 
     wConnection.setText(input.getConnectionName() == null ? "" : input.getConnectionName());
-    wGpkgTargetMode.setText(
-        input.getGpkgTargetMode() == null ? "STATIC_PATH" : input.getGpkgTargetMode());
-    wGpkgFilePath.setText(input.getGpkgFilePath() == null ? "" : input.getGpkgFilePath());
-    wGpkgFileField.setText(input.getGpkgFileField() == null ? "" : input.getGpkgFileField());
+    wGpkgTarget.setValue(
+        new ValueOrField(input.getGpkgTargetMode(), input.getGpkgFilePath(), input.getGpkgFileField()));
     wSchemaName.setText(input.getSchemaName() == null ? "" : input.getSchemaName());
 
-    wImportSourceMode.setText(
-        input.getImportSourceMode() == null ? "STATIC_PATH" : input.getImportSourceMode());
-    wImportFilePath.setText(input.getImportFilePath() == null ? "" : input.getImportFilePath());
-    wImportFileField.setText(input.getImportFileField() == null ? "" : input.getImportFileField());
+    wImportSource.setValue(new ValueOrField(
+        input.getImportSourceMode(), input.getImportFilePath(), input.getImportFileField()));
 
     wModelName.setText(input.getModelName() == null ? "" : input.getModelName());
     wModelDir.setText(input.getModelDir() == null ? "" : input.getModelDir());
@@ -764,9 +666,8 @@ public class Ili2dbDialog extends BaseTransformDialog {
     wDisableValidation.setSelection(input.isDisableValidation());
     wFailOnError.setSelection(input.isFailOnError());
 
-    wDatasetMode.setText(input.getDatasetMode() == null ? "STATIC" : input.getDatasetMode());
-    wDatasetName.setText(input.getDatasetName() == null ? "" : input.getDatasetName());
-    wDatasetField.setText(input.getDatasetField() == null ? "" : input.getDatasetField());
+    wDataset.setValue(
+        new ValueOrField(input.getDatasetMode(), input.getDatasetName(), input.getDatasetField()));
 
     wOutputConnectionField.setText(
         input.getOutputConnectionField() == null ? "ili2db_connection" : input.getOutputConnectionField());
@@ -803,20 +704,19 @@ public class Ili2dbDialog extends BaseTransformDialog {
     wOptions.removeAll();
 
     Ili2dbFlavor flavor = Ili2dbFlavor.fromValue(wFlavor.getText());
-    Ili2dbFunction function = Ili2dbFunction.fromValue(wFunction.getText());
 
     for (Ili2dbOptionDefinition definition : Ili2dbOptionCatalog.allDefinitions()) {
-      Ili2dbOptionEntry existingEntry = existing.get(definition.getKey().toLowerCase(Locale.ROOT));
-      boolean applies = definition.appliesTo(flavor, function);
+      Ili2dbOptionEntry existingEntry = existing.get(definition.key().toLowerCase(Locale.ROOT));
+      boolean applies = definition.appliesTo(flavor);
       boolean enabled = existingEntry != null && existingEntry.isEnabled() && applies;
       String value = existingEntry == null || existingEntry.getValue() == null ? "" : existingEntry.getValue();
 
       TableItem item =
           wOptions.add(
-              definition.getKey(),
+              definition.key(),
               enabled ? "Y" : "N",
               value,
-              definition.getType().name(),
+              definition.type().name(),
               applies
                   ? BaseMessages.getString(PKG, "Ili2dbDialog.Options.Applicable.Yes")
                   : BaseMessages.getString(PKG, "Ili2dbDialog.Options.Applicable.No"));
@@ -878,8 +778,8 @@ public class Ili2dbDialog extends BaseTransformDialog {
     int y = clientArea.y + Math.max(0, (clientArea.height - height) / 2);
     shell.setLocation(x, y);
 
-    shell.open();
     Display display = shell.getDisplay();
+    shell.open();
     while (!shell.isDisposed()) {
       if (!display.readAndDispatch()) {
         display.sleep();
@@ -898,14 +798,16 @@ public class Ili2dbDialog extends BaseTransformDialog {
     input.setFunction(wFunction.getText());
 
     input.setConnectionName(wConnection.getText());
-    input.setGpkgTargetMode(wGpkgTargetMode.getText());
-    input.setGpkgFilePath(wGpkgFilePath.getText());
-    input.setGpkgFileField(wGpkgFileField.getText());
+    ValueOrField gpkgTarget = wGpkgTarget.getValue();
+    input.setGpkgTargetMode(gpkgTarget.mode());
+    input.setGpkgFilePath(gpkgTarget.configuredValue());
+    input.setGpkgFileField(gpkgTarget.fieldName());
     input.setSchemaName(wSchemaName.getText());
 
-    input.setImportSourceMode(wImportSourceMode.getText());
-    input.setImportFilePath(wImportFilePath.getText());
-    input.setImportFileField(wImportFileField.getText());
+    ValueOrField importSource = wImportSource.getValue();
+    input.setImportSourceMode(importSource.mode());
+    input.setImportFilePath(importSource.configuredValue());
+    input.setImportFileField(importSource.fieldName());
 
     input.setModelName(wModelName.getText());
     input.setModelDir(wModelDir.getText());
@@ -916,9 +818,10 @@ public class Ili2dbDialog extends BaseTransformDialog {
     input.setDisableValidation(wDisableValidation.getSelection());
     input.setFailOnError(wFailOnError.getSelection());
 
-    input.setDatasetMode(wDatasetMode.getText());
-    input.setDatasetName(wDatasetName.getText());
-    input.setDatasetField(wDatasetField.getText());
+    ValueOrField dataset = wDataset.getValue();
+    input.setDatasetMode(dataset.mode());
+    input.setDatasetName(dataset.configuredValue());
+    input.setDatasetField(dataset.fieldName());
 
     input.setOutputConnectionField(wOutputConnectionField.getText());
     input.setOutputTargetFileField(wOutputTargetFileField.getText());

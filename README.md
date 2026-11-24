@@ -22,7 +22,8 @@ The Java baseline is release 21. The CI compatibility matrix also tests Java 25.
 - UI:
   - Tabs `Main`, `Options`, `Dataset`
   - Flavor combobox switches between GPKG target file and PostgreSQL connection target
-  - Dataset can be static or sourced from a stream field (transform)
+  - GeoPackage target, import source and dataset name can use a configured value or an input field in the transform.
+  - The transform stores these modes as `CONFIGURED` and `FIELD` in pipeline XML.
 
 ## Modules
 

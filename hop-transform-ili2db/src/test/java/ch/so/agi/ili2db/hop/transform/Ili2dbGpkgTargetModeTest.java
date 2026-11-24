@@ -2,9 +2,11 @@ package ch.so.agi.ili2db.hop.transform;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import ch.so.agi.hop.commons.core.SourceMode;
 import ch.so.agi.ili2db.core.Ili2dbExecutionRequest;
 import ch.so.agi.ili2db.core.Ili2dbExecutionResult;
 import java.io.File;
@@ -14,6 +16,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
+import org.apache.hop.core.ICheckResult;
 import org.apache.hop.core.IRowSet;
 import org.apache.hop.core.exception.HopException;
 import org.apache.hop.core.exception.HopTransformException;
@@ -30,18 +33,21 @@ import org.junit.jupiter.api.Test;
 class Ili2dbGpkgTargetModeTest {
 
   @Test
-  void shouldUseFieldBasedGpkgTargetPerRow() throws Exception {
+  void shouldUseFieldBasedGpkgTargetAndDatasetPerRow() throws Exception {
     Ili2dbMeta meta = createDefaultMeta();
-    meta.setGpkgTargetMode("FIELD");
+    meta.setGpkgTargetMode(SourceMode.FIELD);
     meta.setGpkgFileField("gpkg");
+    meta.setDatasetMode(SourceMode.FIELD);
+    meta.setDatasetField("dataset_name");
 
     RowMeta inputRowMeta = new RowMeta();
     inputRowMeta.addValueMeta(new ValueMetaString("gpkg"));
+    inputRowMeta.addValueMeta(new ValueMetaString("dataset_name"));
 
     TestRowHandler rowHandler =
         new TestRowHandler(
-            new Object[] {"target/first.gpkg"},
-            new Object[] {"target/second.gpkg"});
+            new Object[] {"target/first.gpkg", "first_dataset"},
+            new Object[] {"target/second.gpkg", "second_dataset"});
     List<Ili2dbExecutionRequest> requests = new ArrayList<>();
 
     Ili2db transform = createTransform(meta, inputRowMeta, rowHandler);
@@ -57,6 +63,8 @@ class Ili2dbGpkgTargetModeTest {
     assertFalse(transform.processRow());
 
     assertEquals(2, requests.size());
+    assertEquals("first_dataset", requests.get(0).getDatasetName());
+    assertEquals("second_dataset", requests.get(1).getDatasetName());
     assertEquals(new File("target/first.gpkg").getAbsolutePath(), requests.get(0).getGpkgFile());
     assertEquals(new File("target/second.gpkg").getAbsolutePath(), requests.get(1).getGpkgFile());
     assertEquals(
@@ -99,7 +107,7 @@ class Ili2dbGpkgTargetModeTest {
   @Test
   void shouldRequireInputMetadataForGpkgFieldMode() throws Exception {
     Ili2dbMeta meta = createDefaultMeta();
-    meta.setGpkgTargetMode("FIELD");
+    meta.setGpkgTargetMode(SourceMode.FIELD);
     meta.setGpkgFileField("gpkg");
 
     Ili2db transform = createTransform(meta, null, new TestRowHandler());
@@ -115,7 +123,7 @@ class Ili2dbGpkgTargetModeTest {
   @Test
   void shouldRequireExistingGpkgField() throws Exception {
     Ili2dbMeta meta = createDefaultMeta();
-    meta.setGpkgTargetMode("FIELD");
+    meta.setGpkgTargetMode(SourceMode.FIELD);
     meta.setGpkgFileField("gpkg");
 
     RowMeta inputRowMeta = new RowMeta();
@@ -134,7 +142,7 @@ class Ili2dbGpkgTargetModeTest {
   @Test
   void shouldFailWhenGpkgFieldCannotBeRead() throws Exception {
     Ili2dbMeta meta = createDefaultMeta();
-    meta.setGpkgTargetMode("FIELD");
+    meta.setGpkgTargetMode(SourceMode.FIELD);
     meta.setGpkgFileField("gpkg");
 
     RowMeta inputRowMeta = new RowMeta();
@@ -158,7 +166,7 @@ class Ili2dbGpkgTargetModeTest {
   @Test
   void shouldContinueOnExecutorErrorWhenFailOnErrorIsDisabled() throws Exception {
     Ili2dbMeta meta = createDefaultMeta();
-    meta.setGpkgTargetMode("FIELD");
+    meta.setGpkgTargetMode(SourceMode.FIELD);
     meta.setGpkgFileField("gpkg");
     meta.setFailOnError(false);
 
@@ -176,6 +184,33 @@ class Ili2dbGpkgTargetModeTest {
 
     assertEquals(Boolean.FALSE, getOutputValue(rowHandler, 0, "ili2db_success"));
     assertEquals("import failed", getOutputValue(rowHandler, 0, "ili2db_message"));
+  }
+
+  @Test
+  void shouldIgnoreDisabledImportSourceForSchemaImport() throws Exception {
+    Ili2dbMeta meta = createDefaultMeta();
+    meta.setFunction("SCHEMA_IMPORT");
+    meta.setImportSourceMode(SourceMode.FIELD);
+    meta.setImportFilePath("");
+
+    List<ICheckResult> remarks = new ArrayList<>();
+    meta.check(remarks, new PipelineMeta(), new TransformMeta("ili2db", meta),
+        null, null, null, null, null, null);
+    assertEquals(ICheckResult.TYPE_RESULT_OK, remarks.get(0).getType());
+
+    List<Ili2dbExecutionRequest> requests = new ArrayList<>();
+    Ili2db transform = createTransform(meta, null, new TestRowHandler());
+    initializeTransform(transform);
+    ((Ili2dbData) transform.getData()).executor =
+        request -> {
+          requests.add(request);
+          return Ili2dbExecutionResult.ok("ok");
+        };
+
+    assertTrue(transform.processRow());
+    assertFalse(transform.processRow());
+    assertEquals(1, requests.size());
+    assertNull(requests.get(0).getImportFile());
   }
 
   @Test
@@ -202,7 +237,7 @@ class Ili2dbGpkgTargetModeTest {
   @Test
   void shouldPassThroughFieldBasedIlidataImportSource() throws Exception {
     Ili2dbMeta meta = createDefaultMeta();
-    meta.setImportSourceMode("FIELD");
+    meta.setImportSourceMode(SourceMode.FIELD);
     meta.setImportFileField("import_source");
 
     RowMeta inputRowMeta = new RowMeta();
@@ -229,7 +264,7 @@ class Ili2dbGpkgTargetModeTest {
   @Test
   void shouldStopOnExecutorErrorWhenFailOnErrorIsEnabled() throws Exception {
     Ili2dbMeta meta = createDefaultMeta();
-    meta.setGpkgTargetMode("FIELD");
+    meta.setGpkgTargetMode(SourceMode.FIELD);
     meta.setGpkgFileField("gpkg");
     meta.setFailOnError(true);
 
@@ -253,7 +288,7 @@ class Ili2dbGpkgTargetModeTest {
     meta.setDefault();
     meta.setFlavor("ILI2GPKG");
     meta.setFunction("IMPORT");
-    meta.setImportSourceMode("STATIC_PATH");
+    meta.setImportSourceMode(SourceMode.CONFIGURED);
     meta.setImportFilePath("data/input.xtf");
     meta.setGpkgFilePath("target/default.gpkg");
     return meta;

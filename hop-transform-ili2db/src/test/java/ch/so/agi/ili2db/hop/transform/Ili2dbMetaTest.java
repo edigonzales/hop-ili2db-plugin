@@ -1,8 +1,9 @@
 package ch.so.agi.ili2db.hop.transform;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import ch.so.agi.hop.commons.core.SourceMode;
 import org.apache.hop.core.row.RowMeta;
 import org.junit.jupiter.api.Test;
 
@@ -35,7 +36,19 @@ class Ili2dbMetaTest {
 
     meta.setDefault();
 
-    assertEquals("STATIC_PATH", meta.getGpkgTargetMode());
+    assertEquals(SourceMode.CONFIGURED, meta.getGpkgTargetMode());
     assertEquals("", meta.getGpkgFileField());
+  }
+
+  @Test
+  void shouldUseConfiguredSourcesForMissingModes() {
+    Ili2dbMeta meta = new Ili2dbMeta();
+    meta.setGpkgTargetMode(null);
+    meta.setImportSourceMode(null);
+    meta.setDatasetMode(null);
+
+    assertEquals(SourceMode.CONFIGURED, meta.getGpkgTargetMode());
+    assertEquals(SourceMode.CONFIGURED, meta.getImportSourceMode());
+    assertEquals(SourceMode.CONFIGURED, meta.getDatasetMode());
   }
 }
